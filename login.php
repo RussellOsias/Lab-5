@@ -21,34 +21,35 @@ require 'phpmailer/src/SMTP.php';
 require_once 'vendor/autoload.php';
 
 // Initialize Google Client
-$clientID = '849244603760-94fcqfgipelmg79nqlssatfhjebr4k2u.apps.googleusercontent.com';
-$clientSecret = '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';
-$redirectUri = 'http://localhost:3000/login.php';  // Ensure this matches your setup
+$clientID = '849244603760-94fcqfgipelmg79nqlssatfhjebr4k2u.apps.googleusercontent.com'; // Set the Google OAuth client ID.
+$clientSecret = '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'; // Set the Google OAuth client secret.
+$redirectUri = 'http://localhost:3000/login.php'; // Set the redirect URI to match your setup.
 
-$client = new Google_Client();
-$client->setClientId($clientID);
-$client->setClientSecret($clientSecret);
-$client->setRedirectUri($redirectUri);
-$client->addScope("email");
-$client->addScope("profile");
+$client = new Google_Client(); // Create a new Google client object.
+$client->setClientId($clientID); // Set the client ID for the Google client.
+$client->setClientSecret($clientSecret); // Set the client secret for the Google client.
+$client->setRedirectUri($redirectUri); // Set the redirect URI for the Google client.
+$client->addScope("email"); // Request access to the user's email.
+$client->addScope("profile"); // Request access to the user's profile.
 
 // Check if the user is already authenticated and redirect to index page if so
-if (isset($_SESSION['auth'])) {
-    $_SESSION['status'] = "You are already logged In"; // Set status message
-    header('Location: registration.php'); // Redirect to the registration page
-    exit; // Stop further script execution
+if (isset($_SESSION['auth'])) { // Check if the user is already authenticated.
+    $_SESSION['status'] = "You are already logged In"; // Set a status message indicating the user is already logged in.
+    header('Location: registration.php'); // Redirect to the registration page.
+    exit; // Stop further script execution.
 }
 
 // Handle Google OAuth 2.0 callback
-if (isset($_GET['code'])) {
+if (isset($_GET['code'])) { // Check if the OAuth 2.0 callback code is set.
     try {
-        $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
+        $token = $client->fetchAccessTokenWithAuthCode($_GET['code']); // Exchange the authorization code for an access token.
 
-        if (isset($token['error'])) {
-            $_SESSION['status'] = "Error fetching access token: " . $token['error_description']; // Set error message
-            header('Location: login.php'); // Redirect to login page
-            exit; // Stop further script execution
+        if (isset($token['error'])) { // Check if there was an error fetching the access token.
+            $_SESSION['status'] = "Error fetching access token: " . $token['error_description']; // Set an error message.
+            header('Location: login.php'); // Redirect to the login page.
+            exit; // Stop further script execution.
         }
+
 
         $client->setAccessToken($token);
 
@@ -59,37 +60,37 @@ if (isset($_GET['code'])) {
             exit; // Stop further script execution
         }
 
-        // Get profile information
-        $google_oauth = new Google_Service_Oauth2($client);
-        $google_account_info = $google_oauth->userinfo->get();
+     // Get profile information
+$google_oauth = new Google_Service_Oauth2($client); // Create a new Google OAuth2 service object.
+$google_account_info = $google_oauth->userinfo->get(); // Get the user's profile information from Google.
 
-        // Extract user info
-        $userinfo = [
-            'email' => $google_account_info->getEmail(),
-            'full_name' => $google_account_info->getName(),
-        ];
+// Extract user info
+$userinfo = [ // Extract the user's email and full name.
+    'email' => $google_account_info->getEmail(), // Get the user's email from the Google account info.
+    'full_name' => $google_account_info->getName(), // Get the user's full name from the Google account info.
+];
 
-        // Check if user exists in database
-        $sql = "SELECT * FROM user_profile WHERE email = '{$userinfo['email']}' LIMIT 1";
-        $result = mysqli_query($conn, $sql);
+// Check if user exists in database
+$sql = "SELECT * FROM user_profile WHERE email = '{$userinfo['email']}' LIMIT 1"; // Prepare an SQL query to check if the user already exists in the database.
+$result = mysqli_query($conn, $sql); // Execute the query.
 
-        if (mysqli_num_rows($result) > 0) {
-            // User exists, fetch user data
-            $userinfo_db = mysqli_fetch_assoc($result);
-            $_SESSION['auth'] = true;
-            $_SESSION['user_id'] = $userinfo_db['user_id'];
-            $_SESSION['full_name'] = $userinfo_db['full_name'];
-            $_SESSION['email'] = $userinfo_db['email'];
-        } else {
-            // User does not exist, insert into database
-            $sql = "INSERT INTO user_profile (email, full_name, verify) VALUES ('{$userinfo['email']}', '{$userinfo['full_name']}', 'pending')";
-            $insert_result = mysqli_query($conn, $sql);
-
-            if ($insert_result) {
-                $_SESSION['auth'] = true;
-                $_SESSION['user_id'] = mysqli_insert_id($conn); // Get the inserted user's ID
-                $_SESSION['full_name'] = $userinfo['full_name'];
-                $_SESSION['email'] = $userinfo['email'];
+if (mysqli_num_rows($result) > 0) { // Check if the user exists in the database.
+    // User exists, fetch user data
+    $userinfo_db = mysqli_fetch_assoc($result); // Fetch the user's data from the database.
+    $_SESSION['auth'] = true; // Set a session variable to indicate the user is authenticated.
+    $_SESSION['user_id'] = $userinfo_db['user_id']; // Set the user's ID in the session.
+    $_SESSION['full_name'] = $userinfo_db['full_name']; // Set the user's full name in the session.
+    $_SESSION['email'] = $userinfo_db['email']; // Set the user's email in the session.
+} else {
+    // User does not exist, insert into database
+    $sql = "INSERT INTO user_profile (email, full_name, verify) VALUES ('{$userinfo['email']}', '{$userinfo['full_name']}', 'pending')"; // Prepare an SQL query to insert the new user into the database.
+    $insert_result = mysqli_query($conn, $sql); // Execute the insert query.
+    if ($insert_result) { // Check if the user insertion into the database was successful.
+        $_SESSION['auth'] = true; // Set a session variable to indicate the user is authenticated.
+        $_SESSION['user_id'] = mysqli_insert_id($conn); // Get the auto-generated user ID from the database insertion.
+        $_SESSION['full_name'] = $userinfo['full_name']; // Set the user's full name in the session.
+        $_SESSION['email'] = $userinfo['email']; // Set the user's email in the session.
+    
 
                 // Generate verification code
                 $verification_code = rand(100000, 999999); // Generate a random 6-digit verification code
