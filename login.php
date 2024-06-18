@@ -85,6 +85,7 @@ if (mysqli_num_rows($result) > 0) { // Check if the user exists in the database.
     // User does not exist, insert into database
     $sql = "INSERT INTO user_profile (email, full_name, verify) VALUES ('{$userinfo['email']}', '{$userinfo['full_name']}', 'pending')"; // Prepare an SQL query to insert the new user into the database.
     $insert_result = mysqli_query($conn, $sql); // Execute the insert query.
+   
     if ($insert_result) { // Check if the user insertion into the database was successful.
         $_SESSION['auth'] = true; // Set a session variable to indicate the user is authenticated.
         $_SESSION['user_id'] = mysqli_insert_id($conn); // Get the auto-generated user ID from the database insertion.
